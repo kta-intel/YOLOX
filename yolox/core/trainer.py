@@ -75,7 +75,9 @@ class Trainer:
     def train(self):
         self.before_train()
         try:
+            train_in_epoch_start_time = time.time()
             self.train_in_epoch()
+            print("Train_in_epoch: {}".format(time.time()-train_in_epoch_start_time))
         except Exception:
             raise
         finally:
@@ -145,6 +147,8 @@ class Trainer:
 
         # value of epoch will be set in `resume_train`
         model = self.resume_train(model)
+        
+        model, self.optimizer = ipex.optimize(model, optimizer=self.optimizer)
 
         # data related init
         self.no_aug = self.start_epoch >= self.max_epoch - self.exp.no_aug_epochs
@@ -220,7 +224,7 @@ class Trainer:
         self.save_ckpt(ckpt_name="latest")
 
         if (self.epoch + 1) % self.exp.eval_interval == 0:
-            all_reduce_norm(self.model)
+#             all_reduce_norm(self.model)
             self.evaluate_and_save_model()
 
     def before_iter(self):

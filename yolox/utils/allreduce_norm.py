@@ -100,4 +100,8 @@ def all_reduce_norm(module):
     """
     states = get_async_norm_states(module)
     states = all_reduce(states, op="mean")
+#     import pdb
+#     pdb.set_trace()
+    print('all_reduce_norm')
+    print(list(states.keys())[0])
     module.load_state_dict(states, strict=False)
