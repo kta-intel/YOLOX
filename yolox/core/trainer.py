@@ -49,7 +49,7 @@ class Trainer:
         self.is_distributed = get_world_size() > 1
         self.rank = get_rank()
         self.local_rank = get_local_rank()
-        self.device = 'cpu' # "cuda:{}".format(self.local_rank)
+        self.device = 'xpu' # "cuda:{}".format(self.local_rank)
         self.use_model_ema = exp.ema
         self.save_history_ckpt = exp.save_history_ckpt
 
@@ -75,9 +75,11 @@ class Trainer:
     def train(self):
         self.before_train()
         try:
+            self.total_model_time = 0
             train_in_epoch_start_time = time.time()
             self.train_in_epoch()
             print("Train_in_epoch: {}".format(time.time()-train_in_epoch_start_time))
+            print("Total_model_time: {}".format(self.total_model_time))
         except Exception:
             raise
         finally:
@@ -87,6 +89,7 @@ class Trainer:
         for self.epoch in range(self.start_epoch, self.max_epoch):
             self.before_epoch()
             self.train_in_iter()
+            print("accum_epoch_time: {}".format(self.total_model_time))
             self.after_epoch()
 
     def train_in_iter(self):
@@ -105,8 +108,14 @@ class Trainer:
         inps, targets = self.exp.preprocess(inps, targets, self.input_size)
         data_end_time = time.time()
 
-        with torch.cpu.amp.autocast(enabled=self.amp_training): # with torch.cuda.amp.autocast(enabled=self.amp_training):
+        inps = inps.to(self.device)
+        targets = targets.to(self.device)
+
+        with torch.xpu.amp.autocast(enabled=self.amp_training): # with torch.cuda.amp.autocast(enabled=self.amp_training):
+            train_model_fwd = time.time()
             outputs = self.model(inps, targets)
+            self.total_model_time += time.time()-train_model_fwd
+            print("**Exiting model...")
 
         loss = outputs["total_loss"]
 

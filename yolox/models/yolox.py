@@ -27,13 +27,16 @@ class YOLOX(nn.Module):
 
     def forward(self, x, targets=None):
         # fpn output content features of [dark3, dark4, dark5]
+        print("yolox starts")
         fpn_outs = self.backbone(x)
 
         if self.training:
+            print('training is true')
             assert targets is not None
             loss, iou_loss, conf_loss, cls_loss, l1_loss, num_fg = self.head(
                 fpn_outs, targets, x
             )
+            print('losses calculated')
             outputs = {
                 "total_loss": loss,
                 "iou_loss": iou_loss,
@@ -42,7 +45,11 @@ class YOLOX(nn.Module):
                 "cls_loss": cls_loss,
                 "num_fg": num_fg,
             }
+            print('outputs defined')
         else:
+            print('training is false')
             outputs = self.head(fpn_outs)
+            print('outputs defined')
 
+        print("yolox end")
         return outputs
