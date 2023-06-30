@@ -75,27 +75,44 @@ class Trainer:
     def train(self):
         self.before_train()
         try:
-            self.total_model_time = 0
-            train_in_epoch_start_time = time.time()
             self.train_in_epoch()
-            print("Train_in_epoch: {}".format(time.time()-train_in_epoch_start_time))
-            print("Total_model_time: {}".format(self.total_model_time))
         except Exception:
             raise
         finally:
             self.after_train()
 
     def train_in_epoch(self):
+        with open('per_iter_time.txt', 'w') as f:
+            f.write('Time per each iteration (batch) \n')
+        with open('per_epoch_time.txt', 'w') as f:
+            f.write('Time per each epoch \n')
+        with open('per_model_time.txt', 'w') as f:
+            f.write('Time per forward pass through model \n')
+
         for self.epoch in range(self.start_epoch, self.max_epoch):
             self.before_epoch()
+
+            with open('per_iter_time.txt', 'a') as f:
+                f.write('epoch------- \n')
+            with open('per_model_time.txt', 'a') as f:
+                f.write('epoch------- \n')
+
+            per_epoch_start_time = time.time()
             self.train_in_iter()
-            print("accum_epoch_time: {}".format(self.total_model_time))
+            with open('per_epoch_time.txt', 'a') as f:
+                print("per_epoch_time: {} \n".format(time.time()-per_epoch_start_time), file=f)
+            
             self.after_epoch()
 
     def train_in_iter(self):
         for self.iter in range(self.max_iter):
             self.before_iter()
+
+            per_iter_start_time = time.time()
             self.train_one_iter()
+            with open('per_iter_time.txt', 'a') as f:
+                print("per_iter_time: {} \n".format(time.time()-per_iter_start_time), file=f)
+
             self.after_iter()
 
     def train_one_iter(self):
@@ -114,7 +131,10 @@ class Trainer:
         with torch.xpu.amp.autocast(enabled=self.amp_training): # with torch.cuda.amp.autocast(enabled=self.amp_training):
             train_model_fwd = time.time()
             outputs = self.model(inps, targets)
-            self.total_model_time += time.time()-train_model_fwd
+
+            with open('per_model_time.txt', 'a') as f:
+                print("per_model_time: {} \n".format(time.time()-train_model_fwd), file=f)
+                
             print("**Exiting model...")
 
         loss = outputs["total_loss"]
